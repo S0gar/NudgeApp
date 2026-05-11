@@ -10,7 +10,7 @@ CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 CONFIG_PATH = os.path.join(CURRENT_DIR, '..', '..', 'config.ini')
 
 # абсолютный путь к файлу bot_phrases.yaml относительно текущего файла
-PHRASES_PATH = os.path.join(CURRENT_DIR, 'bot phrases.yaml')
+PHRASES_PATH = os.path.join(CURRENT_DIR, 'handlers', 'bot phrases.yaml')
 
 # обращаемся к конфигу и берем оттуда токкен бота
 CONFIG = configparser.ConfigParser()
