@@ -2,6 +2,8 @@ import configparser
 import os
 
 import telebot
+from telebot import custom_filters
+from telebot.storage import StateMemoryStorage
 
 from backend.bot.handlers import register_all_handlers
 
@@ -16,7 +18,11 @@ CONFIG = configparser.ConfigParser()
 _ = CONFIG.read(CONFIG_PATH)
 bot_token = CONFIG["BOT setup"]["key"]
 
-bot = telebot.TeleBot(bot_token)
+# объявляем объект для работы с машиной состояния (FSM - Finite State Machine)
+state_storage = StateMemoryStorage()
+
+
+bot = telebot.TeleBot(bot_token, state_storage=state_storage)
 register_all_handlers(bot)
 
 

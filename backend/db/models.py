@@ -27,6 +27,7 @@ class Tasks(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
-    text: Mapped[str] = mapped_column(String(30000))
+    title: Mapped[str] = mapped_column(String(64))
+    text: Mapped[str] = mapped_column(String(3000))
     deadline: Mapped[datetime] = mapped_column(DateTime)
-    status: Mapped[str] = mapped_column(NotNullable=True)
+    status: Mapped[str] = mapped_column(nullable=False)

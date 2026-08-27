@@ -1,0 +1,71 @@
+import os
+
+import yaml
+
+from telebot import TeleBot
+from telebot import custom_filters
+from telebot.handler_backends import State, StatesGroup
+from telebot.storage import StateMemoryStorage
+
+# абсолютный путь к папке, где лежит текущий файл
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+
+# абсолютный путь к файлу bot_phrases.yaml относительно текущего файла
+PHRASES_PATH = os.path.join(CURRENT_DIR, "bot phrases.yaml")
+
+# обращаемся к файлу с фразами бота
+with open(PHRASES_PATH, "r", encoding="utf-8") as file:
+    PHRASES_CONFIG = yaml.safe_load(file)
+
+
+class Create_new_task(StatesGroup):
+    title = State()
+    text = State()
+    deadline = State()
+
+
+# передаем функции объект бота для инициализации функций требующих это
+def register_tasks_handlers(bot: TeleBot):
+
+    # команда new_task для работы с ботом в отсутствие miniapp
+    @bot.message_handler(commands=["new_task"])
+    def create_new_task(message):
+        bot.set_state(message.from_user.id, Create_new_task.title, message.chat.id)
+        new_task_title_request = PHRASES_CONFIG["bot_messages"][
+            "new_task_title_request"
+        ]
+        bot.send_message(message.chat.id, new_task_title_request)
+
+    @bot.message_handler(state=Create_new_task.title)
+    def create_new_task_title_request(message):
+        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+            data["title"] = message.text
+
+        bot.set_state(message.from_user.id, Create_new_task.text, message.chat.id)
+        new_task_text_request = PHRASES_CONFIG["bot_messages"]["new_task_text_request"]
+        bot.send_message(message.chat.id, new_task_text_request)
+
+    @bot.message_handler(state=Create_new_task.text)
+    def create_new_task_text_request(message):
+        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+            data["text"] = message.text
+
+        bot.set_state(message.from_user.id, Create_new_task.deadline, message.chat.id)
+        new_task_deadline_request = PHRASES_CONFIG["bot_messages"][
+            "new_task_deadline_request"
+        ]
+        bot.send_message(message.chat.id, new_task_deadline_request)
+
+    @bot.message_handler(state=Create_new_task.deadline)
+    def create_new_task_deadline_request(message):
+        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+            title = data["title"]
+            text = data["text"]
+            deadline = message.text
+
+        message_text = f"Тест создания задачи:\nНазвание: {title}\nТекст: {text}\nДедлайн: {deadline}"
+        bot.send_message(message.chat.id, message_text)
+
+        bot.delete_state(message.from_user.id, message.chat.id)
+
+    bot.add_custom_filter(custom_filters.StateFilter(bot))

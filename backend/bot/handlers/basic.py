@@ -17,6 +17,7 @@ PHRASES_PATH = os.path.join(CURRENT_DIR, "bot phrases.yaml")
 with open(PHRASES_PATH, "r", encoding="utf-8") as file:
     PHRASES_CONFIG = yaml.safe_load(file)
 
+
 # передаем функции объект бота для инициализации функций требующих это
 def register_basic_handlers(bot: TeleBot):
 
@@ -27,6 +28,7 @@ def register_basic_handlers(bot: TeleBot):
 
         _ = bot.send_message(message.chat.id, greetings_message_text)
 
+    # регистрация пользователя после команды /reg
     @bot.message_handler(commands=["reg"])
     def register_user(message):
         with Session() as session:
@@ -36,7 +38,7 @@ def register_basic_handlers(bot: TeleBot):
                         telegram_id=message.chat.id,
                         user_name=message.from_user.first_name,
                     ),
-                   session,
+                    session,
                 )
                 register_message_text = PHRASES_CONFIG["bot_messages"]["register"]
                 _ = bot.send_message(message.chat.id, register_message_text)
@@ -45,34 +47,42 @@ def register_basic_handlers(bot: TeleBot):
                 raise
             else:
                 session.commit()
+
+    # временная команда info для проверки работоспособности регистрации пользователя и БД
     @bot.message_handler(commands=["info"])
     def user_info(message):
         with Session() as session:
             try:
-                user_info= get_by_id(telegram_id=message.chat.id, session=session)
+                user_info = get_by_id(telegram_id=message.chat.id, session=session)
                 print(user_info)
                 bot.send_message(message.chat.id, user_info)
             except:
-                user_not_found_message = PHRASES_CONFIG["bot_messages"]["user_not_found"]
+                user_not_found_message = PHRASES_CONFIG["bot_messages"][
+                    "user_not_found"
+                ]
                 bot.send_message(message.chat.id, user_not_found_message)
                 session.rollback()
-                raise
-            else:
-                session.commit()
-    
-    @bot.message_handler(commands=["delete_me"])
-    def user_info(message):
-        with Session() as session:
-            try:
-                user_info= get_by_id(telegram_id=message.chat.id, session=session)
-                delete_user(user_info, session)
-                delete_successfull_message = PHRASES_CONFIG["bot_messages"]["delete_successfull"]
-                bot.send_message(message.chat.id, delete_successfull_message)
-            except:
-                session.rollback()
-                user_not_found_message = PHRASES_CONFIG["bot_messages"]["user_not_found"]
-                bot.send_message(message.chat.id, user_not_found_message)
                 raise
             else:
                 session.commit()
 
+    # временная команда delete_me для проверки работоспособности регистрации пользователя и БД
+    @bot.message_handler(commands=["delete_me"])
+    def delete_user(message):
+        with Session() as session:
+            try:
+                user_info = get_by_id(telegram_id=message.chat.id, session=session)
+                delete_user(user_info, session)
+                delete_successfull_message = PHRASES_CONFIG["bot_messages"][
+                    "delete_successfull"
+                ]
+                bot.send_message(message.chat.id, delete_successfull_message)
+            except:
+                session.rollback()
+                user_not_found_message = PHRASES_CONFIG["bot_messages"][
+                    "user_not_found"
+                ]
+                bot.send_message(message.chat.id, user_not_found_message)
+                raise
+            else:
+                session.commit()
