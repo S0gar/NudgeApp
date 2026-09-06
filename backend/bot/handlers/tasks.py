@@ -9,7 +9,7 @@ from telebot.handler_backends import State, StatesGroup
 from telebot.storage import StateMemoryStorage
 
 from backend.db.models import TasksBase
-from backend.db.session import get_by_id, Session, create_task
+from backend.db.session import get_by_id, Session, create_task, get_user_tasks
 
 # абсолютный путь к папке, где лежит текущий файл
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -102,3 +102,12 @@ def register_tasks_handlers(bot: TeleBot):
         bot.delete_state(message.from_user.id, message.chat.id)
 
     bot.add_custom_filter(custom_filters.StateFilter(bot))
+
+    @bot.message_handler(commands=["my_tasks"])
+    def withdraw_users_tasks(message):
+        print("AAAAAAAAAAAAAAA")
+        with Session() as session:
+            tasks = get_user_tasks(message.from_user.id, session)
+            for task in tasks:
+                bot.send_message(message.chat.id, task.title)
+        return 0
