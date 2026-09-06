@@ -7,6 +7,8 @@ from telebot import custom_filters
 from telebot.handler_backends import State, StatesGroup
 from telebot.storage import StateMemoryStorage
 
+from backend.db.session import get_by_id, Session
+
 # абсолютный путь к папке, где лежит текущий файл
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
@@ -30,7 +32,16 @@ def register_tasks_handlers(bot: TeleBot):
     # команда new_task для работы с ботом в отсутствие miniapp
     @bot.message_handler(commands=["new_task"])
     def create_new_task(message):
+        with Session() as session:
+            try:
+                user_info = get_by_id(message.from_user.id, session)
+            except:
+                user_not_found_error = PHRASES_CONFIG["bot_messages"]["user_not_found"]
+                bot.send_message(message.chat.id, user_not_found_error)
+                return "user not found"
+
         bot.set_state(message.from_user.id, Create_new_task.title, message.chat.id)
+
         new_task_title_request = PHRASES_CONFIG["bot_messages"][
             "new_task_title_request"
         ]

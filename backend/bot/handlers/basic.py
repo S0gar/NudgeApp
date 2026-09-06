@@ -30,27 +30,60 @@ def register_basic_handlers(bot: TeleBot):
 
     # регистрация пользователя после команды /reg
     @bot.message_handler(commands=["reg"])
-    def register_user(message):
+    def start_register_user(message):
         with Session() as session:
             try:
-                create_user(
-                    UserBase(
-                        telegram_id=message.chat.id,
-                        user_name=message.from_user.first_name,
-                    ),
-                    session,
-                )
-                register_message_text = PHRASES_CONFIG["bot_messages"]["register"]
-                _ = bot.send_message(message.chat.id, register_message_text)
+                _ = get_by_id(message.from_user.id, session)
+                user_already_exists_error = PHRASES_CONFIG["bot_messages"][
+                    "user_already_exists"
+                ]
+                bot.send_message(message.chat.id, user_already_exists_error)
+                return user_already_exists_error
             except:
-                session.rollback()
-                raise
-            else:
-                session.commit()
+                pass
+
+        register_UTC_request_text = PHRASES_CONFIG["bot_messages"]["reg_UTC_request"]
+
+        msg = bot.send_message(message.chat.id, register_UTC_request_text)
+        bot.register_next_step_handler(msg, end_register_user)
+
+    def end_register_user(message):
+        users_time_zone = message.text
+        try:
+            users_time_zone = int(users_time_zone)
+            if not (-12 <= users_time_zone <= 14):
+                reg_UTC_value_error = PHRASES_CONFIG["bot_messages"][
+                    "reg_UTC_value_error"
+                ]
+                bot.send_message(message.chat.id, reg_UTC_value_error)
+            with Session() as session:
+                try:
+                    create_user(
+                        UserBase(
+                            telegram_id=message.chat.id,
+                            user_name=message.from_user.first_name,
+                            time_zone=users_time_zone,
+                        ),
+                        session,
+                    )
+                    register_message_text = PHRASES_CONFIG["bot_messages"]["register"]
+                    _ = bot.send_message(message.chat.id, register_message_text)
+                except:
+                    session.rollback()
+                    raise
+                else:
+                    session.commit()
+
+        except Exception as e:
+            reg_UTC_format_error = PHRASES_CONFIG["bot_messages"][
+                "reg_UTC_format_error"
+            ]
+            print(exception)
+            bot.send_message(message.chat.id, reg_UTC_format_error)
 
     # временная команда info для проверки работоспособности регистрации пользователя и БД
     @bot.message_handler(commands=["info"])
-    def user_info(message):
+    def user_info_handler(message):
         with Session() as session:
             try:
                 user_info = get_by_id(telegram_id=message.chat.id, session=session)
@@ -68,7 +101,7 @@ def register_basic_handlers(bot: TeleBot):
 
     # временная команда delete_me для проверки работоспособности регистрации пользователя и БД
     @bot.message_handler(commands=["delete_me"])
-    def delete_user(message):
+    def delete_user_handler(message):
         with Session() as session:
             try:
                 user_info = get_by_id(telegram_id=message.chat.id, session=session)

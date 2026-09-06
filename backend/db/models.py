@@ -16,10 +16,10 @@ class UserBase(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     telegram_id: Mapped[int] = mapped_column()
     user_name: Mapped[str] = mapped_column(String(32))
-    time_zone: Mapped[str] = mapped_column(default="Europe/Samara")
+    time_zone: Mapped[int] = mapped_column(default=7)
 
     def __repr__(self) -> str:
-        return f"UserBase(telegram_id={self.telegram_id}, user_name={self.user_name})"
+        return f"UserBase(telegram_id={self.telegram_id}, user_name={self.user_name}, time_zone={self.time_zone})"
 
 
 class Tasks(Base):
