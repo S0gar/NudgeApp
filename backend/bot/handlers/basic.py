@@ -78,7 +78,7 @@ def register_basic_handlers(bot: TeleBot):
             reg_UTC_format_error = PHRASES_CONFIG["bot_messages"][
                 "reg_UTC_format_error"
             ]
-            print(exception)
+            print(Exception)
             bot.send_message(message.chat.id, reg_UTC_format_error)
 
     # временная команда info для проверки работоспособности регистрации пользователя и БД

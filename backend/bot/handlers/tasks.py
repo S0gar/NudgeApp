@@ -1,4 +1,5 @@
 import os
+from datetime import datetime
 
 import yaml
 
@@ -7,7 +8,8 @@ from telebot import custom_filters
 from telebot.handler_backends import State, StatesGroup
 from telebot.storage import StateMemoryStorage
 
-from backend.db.session import get_by_id, Session
+from backend.db.models import TasksBase
+from backend.db.session import get_by_id, Session, create_task
 
 # абсолютный путь к папке, где лежит текущий файл
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -31,7 +33,7 @@ def register_tasks_handlers(bot: TeleBot):
 
     # команда new_task для работы с ботом в отсутствие miniapp
     @bot.message_handler(commands=["new_task"])
-    def create_new_task(message):
+    def create_new_task_handler(message):
         with Session() as session:
             try:
                 user_info = get_by_id(message.from_user.id, session)
@@ -73,6 +75,26 @@ def register_tasks_handlers(bot: TeleBot):
             title = data["title"]
             text = data["text"]
             deadline = message.text
+
+        parsed_deadline = datetime.strptime(deadline, "%d.%m.%Y")
+
+        with Session() as session:
+            try:
+                create_task(
+                    TasksBase(
+                        user_id=message.from_user.id,
+                        title=title,
+                        text=text,
+                        deadline=parsed_deadline,
+                        status="active",
+                    ),
+                    session,
+                )
+            except:
+                session.rollback()
+                raise
+            else:
+                session.commit()
 
         message_text = f"Тест создания задачи:\nНазвание: {title}\nТекст: {text}\nДедлайн: {deadline}"
         bot.send_message(message.chat.id, message_text)

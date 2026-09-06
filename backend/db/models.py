@@ -22,7 +22,7 @@ class UserBase(Base):
         return f"UserBase(telegram_id={self.telegram_id}, user_name={self.user_name}, time_zone={self.time_zone})"
 
 
-class Tasks(Base):
+class TasksBase(Base):
     __tablename__ = "tasks"
 
     id: Mapped[int] = mapped_column(primary_key=True)
