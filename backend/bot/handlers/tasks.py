@@ -3,6 +3,7 @@ from datetime import datetime
 
 import yaml
 
+from telebot.types import InlineKeyboardMarkup, InlineKeyboardButton
 from telebot import TeleBot
 from telebot import custom_filters
 from telebot.handler_backends import State, StatesGroup
@@ -105,9 +106,44 @@ def register_tasks_handlers(bot: TeleBot):
 
     @bot.message_handler(commands=["my_tasks"])
     def withdraw_users_tasks(message):
-        print("AAAAAAAAAAAAAAA")
         with Session() as session:
             tasks = get_user_tasks(message.from_user.id, session)
-            for task in tasks:
-                bot.send_message(message.chat.id, task.title)
+
+            current_index = 0
+            keyboard = InlineKeyboardMarkup(row_width=2)
+
+            buttonNext = InlineKeyboardButton(
+                "==>", callback_data=f"task_{current_index + 1}"
+            )
+            buttonPrev = InlineKeyboardButton(
+                "<==", callback_data=f"task_{current_index - 1}"
+            )
+            keyboard.add(buttonPrev, buttonNext)
+
+            bot.send_message(message.chat.id, tasks[0].title, reply_markup=keyboard)
         return 0
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("task_"))
+    def next_task_and_withdraw_users_tasks(call):
+        target_index = int(call.data.split("_")[1])
+        with Session() as session:
+            tasks = get_user_tasks(call.from_user.id, session)
+
+            keyboard = InlineKeyboardMarkup(row_width=2)
+
+            buttonNext = InlineKeyboardButton(
+                "==>", callback_data=f"task_{target_index + 1}"
+            )
+            buttonPrev = InlineKeyboardButton(
+                "<==", callback_data=f"task_{target_index - 1}"
+            )
+            keyboard.add(buttonPrev, buttonNext)
+
+            # Обновляем текст сообщения и клавиатуру
+            bot.edit_message_text(
+                text=tasks[target_index].title,
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                reply_markup=keyboard,
+            )
+            bot.answer_callback_query(call.id)
