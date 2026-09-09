@@ -22,3 +22,8 @@ bot_messages:
     Укажите текст задачи (ограничение 3000 символов):
   new_task_deadline_request: |
     Укажите срок окончания задачи в формате DD:MM:YYYY:HH:mm или отправьте NONE если задача безсрочная:
+  task_withdraw_format: |
+    <b>{title}</b>
+    {text}
+
+    deadline: {deadline}

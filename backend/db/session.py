@@ -1,5 +1,3 @@
-from collections import deque
-
 from sqlalchemy.orm import session
 from sqlalchemy import select
 
@@ -32,9 +30,9 @@ def create_task(task: TasksBase, session) -> TasksBase:
     return task
 
 
-def get_user_tasks(user_id: int, session) -> deque[TasksBase]:
+def get_user_tasks(user_id: int, session) -> list[TasksBase]:
     statement = select(TasksBase).where(TasksBase.user_id == user_id)
-    return deque(list(session.scalars(statement).all()))
+    return list(session.scalars(statement).all())
 
 
 def get_task_by_id(task_id: int, session) -> TasksBase | None:

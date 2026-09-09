@@ -115,12 +115,17 @@ def register_tasks_handlers(bot: TeleBot):
             buttonNext = InlineKeyboardButton(
                 "==>", callback_data=f"task_{current_index + 1}"
             )
-            buttonPrev = InlineKeyboardButton(
-                "<==", callback_data=f"task_{current_index - 1}"
-            )
-            keyboard.add(buttonPrev, buttonNext)
+            keyboard.add(buttonNext)
 
-            bot.send_message(message.chat.id, tasks[0].title, reply_markup=keyboard)
+            text = PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
+            bot.send_message(
+                message.chat.id,
+                text.format(
+                    title=tasks[0].title, text=tasks[0].text, deadline=tasks[0].deadline
+                ),
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
         return 0
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith("task_"))
@@ -128,7 +133,6 @@ def register_tasks_handlers(bot: TeleBot):
         target_index = int(call.data.split("_")[1])
         with Session() as session:
             tasks = get_user_tasks(call.from_user.id, session)
-
             keyboard = InlineKeyboardMarkup(row_width=2)
 
             buttonNext = InlineKeyboardButton(
@@ -137,13 +141,22 @@ def register_tasks_handlers(bot: TeleBot):
             buttonPrev = InlineKeyboardButton(
                 "<==", callback_data=f"task_{target_index - 1}"
             )
-            keyboard.add(buttonPrev, buttonNext)
+            if target_index > 0:
+                keyboard.add(buttonPrev)
+            if target_index < len(tasks) - 1:
+                keyboard.add(buttonNext)
 
+            text = PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
             # Обновляем текст сообщения и клавиатуру
             bot.edit_message_text(
-                text=tasks[target_index].title,
+                text=text.format(
+                    title=tasks[target_index].title,
+                    text=tasks[target_index].text,
+                    deadline=tasks[target_index].deadline,
+                ),
                 chat_id=call.message.chat.id,
                 message_id=call.message.message_id,
                 reply_markup=keyboard,
+                parse_mode="HTML",
             )
             bot.answer_callback_query(call.id)
