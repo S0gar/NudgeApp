@@ -27,3 +27,5 @@ bot_messages:
     {text}
 
     deadline: {deadline}
+  deleted_task: |
+    Задача удалена

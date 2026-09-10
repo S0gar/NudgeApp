@@ -10,7 +10,14 @@ from telebot.handler_backends import State, StatesGroup
 from telebot.storage import StateMemoryStorage
 
 from backend.db.models import TasksBase
-from backend.db.session import get_by_id, Session, create_task, get_user_tasks
+from backend.db.session import (
+    get_by_id,
+    Session,
+    create_task,
+    get_user_tasks,
+    delete_task,
+    get_task_by_id,
+)
 
 # абсолютный путь к папке, где лежит текущий файл
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -115,7 +122,11 @@ def register_tasks_handlers(bot: TeleBot):
             buttonNext = InlineKeyboardButton(
                 "==>", callback_data=f"task_{current_index + 1}"
             )
+            buttonDelete = InlineKeyboardButton(
+                "Удалить", callback_data=f"delete_task_{current_index}"
+            )
             keyboard.add(buttonNext)
+            keyboard.add(buttonDelete)
 
             text = PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
             bot.send_message(
@@ -141,8 +152,12 @@ def register_tasks_handlers(bot: TeleBot):
             buttonPrev = InlineKeyboardButton(
                 "<==", callback_data=f"task_{target_index - 1}"
             )
+            buttonDelete = InlineKeyboardButton(
+                "Удалить", callback_data=f"delete_task_{target_index}"
+            )
             if target_index > 0:
                 keyboard.add(buttonPrev)
+            keyboard.add(buttonDelete)
             if target_index < len(tasks) - 1:
                 keyboard.add(buttonNext)
 
@@ -159,4 +174,41 @@ def register_tasks_handlers(bot: TeleBot):
                 reply_markup=keyboard,
                 parse_mode="HTML",
             )
+            bot.answer_callback_query(call.id)
+
+    @bot.callback_query_handler(func=lambda call: call.data.startswith("delete_task_"))
+    def delete_task_and_withdraw_users_tasks(call):
+        target_index = int(call.data.split("_")[2])
+        with Session() as session:
+            tasks = get_user_tasks(call.from_user.id, session)
+            deleted_task = get_task_by_id(tasks[target_index].id, session)
+            delete_task(deleted_task, session)
+            session.commit()
+            keyboard = InlineKeyboardMarkup(row_width=2)
+
+            buttonNext = InlineKeyboardButton(
+                "==>", callback_data=f"task_{target_index + 1}"
+            )
+            buttonPrev = InlineKeyboardButton(
+                "<==", callback_data=f"task_{target_index - 1}"
+            )
+            if target_index > 0:
+                keyboard.add(buttonPrev)
+            if target_index < len(tasks) - 1:
+                keyboard.add(buttonNext)
+
+            text = PHRASES_CONFIG["bot_messages"]["deleted_task"]
+            # Обновляем текст сообщения и клавиатуру
+            bot.edit_message_text(
+                text=text.format(
+                    title=tasks[target_index].title,
+                    text=tasks[target_index].text,
+                    deadline=tasks[target_index].deadline,
+                ),
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
+            # баг, если из двух задач удалить одну, при нажатии на кнопку другого така выдаст ошибку выход за пределы
             bot.answer_callback_query(call.id)
