@@ -111,6 +111,20 @@ def register_tasks_handlers(bot: TeleBot):
 
     bot.add_custom_filter(custom_filters.StateFilter(bot))
 
+    def next_and_prew_buttons(
+        keyboard: InlineKeyboardMarkup, index: int, num_of_tasks: int
+    ) -> None:
+        buttonNext = InlineKeyboardButton("==>", callback_data=f"task_{index + 1}")
+        buttonPrev = InlineKeyboardButton("<==", callback_data=f"task_{index - 1}")
+        need_button_prev = index > 0
+        need_button_next = index < num_of_tasks - 1
+        if need_button_prev and need_button_next:
+            keyboard.add(buttonPrev, buttonNext)
+        elif need_button_prev and not need_button_next:
+            keyboard.add(buttonPrev)
+        elif not need_button_prev and need_button_next:
+            keyboard.add(buttonNext)
+
     @bot.message_handler(commands=["my_tasks"])
     def withdraw_users_tasks(message):
         with Session() as session:
@@ -119,13 +133,14 @@ def register_tasks_handlers(bot: TeleBot):
             current_index = 0
             keyboard = InlineKeyboardMarkup(row_width=2)
 
-            buttonNext = InlineKeyboardButton(
-                "==>", callback_data=f"task_{current_index + 1}"
-            )
             buttonDelete = InlineKeyboardButton(
                 "Удалить", callback_data=f"delete_task_{current_index}"
             )
-            keyboard.add(buttonNext)
+            buttonCompleped = InlineKeyboardButton(
+                "Выполнено", callback_data=f"completed_task_{current_index}"
+            )
+            next_and_prew_buttons(keyboard=keyboard, index=0, num_of_tasks=len(tasks))
+            keyboard.add(buttonCompleped)
             keyboard.add(buttonDelete)
 
             text = PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
@@ -146,20 +161,17 @@ def register_tasks_handlers(bot: TeleBot):
             tasks = get_user_tasks(call.from_user.id, session)
             keyboard = InlineKeyboardMarkup(row_width=2)
 
-            buttonNext = InlineKeyboardButton(
-                "==>", callback_data=f"task_{target_index + 1}"
-            )
-            buttonPrev = InlineKeyboardButton(
-                "<==", callback_data=f"task_{target_index - 1}"
-            )
             buttonDelete = InlineKeyboardButton(
                 "Удалить", callback_data=f"delete_task_{target_index}"
             )
-            if target_index > 0:
-                keyboard.add(buttonPrev)
+            buttonCompleped = InlineKeyboardButton(
+                "Выполнено", callback_data=f"completed_task_{target_index}"
+            )
+            next_and_prew_buttons(
+                keyboard=keyboard, index=target_index, num_of_tasks=len(tasks)
+            )
+            keyboard.add(buttonCompleped)
             keyboard.add(buttonDelete)
-            if target_index < len(tasks) - 1:
-                keyboard.add(buttonNext)
 
             text = PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
             # Обновляем текст сообщения и клавиатуру
@@ -186,19 +198,11 @@ def register_tasks_handlers(bot: TeleBot):
             session.commit()
             keyboard = InlineKeyboardMarkup(row_width=2)
 
-            buttonNext = InlineKeyboardButton(
-                "==>", callback_data=f"task_{target_index + 1}"
+            next_and_prew_buttons(
+                keyboard=keyboard, index=target_index, num_of_tasks=len(tasks)
             )
-            buttonPrev = InlineKeyboardButton(
-                "<==", callback_data=f"task_{target_index - 1}"
-            )
-            if target_index > 0:
-                keyboard.add(buttonPrev)
-            if target_index < len(tasks) - 1:
-                keyboard.add(buttonNext)
 
             text = PHRASES_CONFIG["bot_messages"]["deleted_task"]
-            # Обновляем текст сообщения и клавиатуру
             bot.edit_message_text(
                 text=text.format(
                     title=tasks[target_index].title,
@@ -211,4 +215,33 @@ def register_tasks_handlers(bot: TeleBot):
                 parse_mode="HTML",
             )
             # баг, если из двух задач удалить одну, при нажатии на кнопку другого така выдаст ошибку выход за пределы
+            bot.answer_callback_query(call.id)
+
+    @bot.callback_query_handler(
+        func=lambda call: call.data.startswith("completed_task_")
+    )
+    def complete_task_and_withdraw_users_tasks(call):
+        target_index = int(call.data.split("_")[2])
+        with Session() as session:
+            tasks = get_user_tasks(call.from_user.id, session)
+            taaks = tasks[target_index].status = "completed"
+            session.commit()
+            keyboard = InlineKeyboardMarkup(row_width=2)
+
+            next_and_prew_buttons(
+                keyboard=keyboard, index=target_index, num_of_tasks=len(tasks)
+            )
+
+            text = PHRASES_CONFIG["bot_messages"]["deleted_task"]
+            bot.edit_message_text(
+                text=text.format(
+                    title=tasks[target_index].title,
+                    text=tasks[target_index].text,
+                    deadline=tasks[target_index].deadline,
+                ),
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
             bot.answer_callback_query(call.id)
