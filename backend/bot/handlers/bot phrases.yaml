@@ -29,3 +29,7 @@ bot_messages:
     deadline: {deadline}
   deleted_task: |
     Задача удалена
+
+  ask_for_confirm_delete: |
+    Вы уверены, что хотите удалить задачу <b>{title}</b>
+    Это действие нельзя будет отменить!

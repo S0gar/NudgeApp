@@ -125,6 +125,12 @@ def register_tasks_handlers(bot: TeleBot):
         elif not need_button_prev and need_button_next:
             keyboard.add(buttonNext)
 
+    def delete_button(keyboard: InlineKeyboardMarkup, index: int) -> None:
+        buttonDelete = InlineKeyboardButton(
+            "Удалить", callback_data=f"ask_for_confirm_delete_task_{index}"
+        )
+        keyboard.add(buttonDelete)
+
     @bot.message_handler(commands=["my_tasks"])
     def withdraw_users_tasks(message):
         with Session() as session:
@@ -133,15 +139,12 @@ def register_tasks_handlers(bot: TeleBot):
             current_index = 0
             keyboard = InlineKeyboardMarkup(row_width=2)
 
-            buttonDelete = InlineKeyboardButton(
-                "Удалить", callback_data=f"delete_task_{current_index}"
-            )
             buttonCompleped = InlineKeyboardButton(
                 "Выполнено", callback_data=f"completed_task_{current_index}"
             )
             next_and_prew_buttons(keyboard=keyboard, index=0, num_of_tasks=len(tasks))
             keyboard.add(buttonCompleped)
-            keyboard.add(buttonDelete)
+            delete_button(keyboard=keyboard, index=current_index)
 
             text = PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
             bot.send_message(
@@ -161,9 +164,6 @@ def register_tasks_handlers(bot: TeleBot):
             tasks = get_user_tasks(call.from_user.id, session)
             keyboard = InlineKeyboardMarkup(row_width=2)
 
-            buttonDelete = InlineKeyboardButton(
-                "Удалить", callback_data=f"delete_task_{target_index}"
-            )
             buttonCompleped = InlineKeyboardButton(
                 "Выполнено", callback_data=f"completed_task_{target_index}"
             )
@@ -171,7 +171,7 @@ def register_tasks_handlers(bot: TeleBot):
                 keyboard=keyboard, index=target_index, num_of_tasks=len(tasks)
             )
             keyboard.add(buttonCompleped)
-            keyboard.add(buttonDelete)
+            delete_button(keyboard=keyboard, index=target_index)
 
             text = PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
             # Обновляем текст сообщения и клавиатуру
@@ -187,6 +187,31 @@ def register_tasks_handlers(bot: TeleBot):
                 parse_mode="HTML",
             )
             bot.answer_callback_query(call.id)
+
+    @bot.callback_query_handler(
+        func=lambda call: call.data.startswith("ask_for_confirm_delete_task_")
+    )
+    def ask_for_confirm_delete_task_and_withdraw_users_tasks(call):
+        target_index = int(call.data.split("_")[5])
+        keyboard = InlineKeyboardMarkup(row_width=2)
+        button_conf = InlineKeyboardButton(
+            "удалить", callback_data=f"delete_task_{target_index}"
+        )
+        button_cancel = InlineKeyboardButton(
+            "отмена", callback_data=f"task_{target_index}"
+        )
+        keyboard.add(button_conf, button_cancel)
+        text = PHRASES_CONFIG["bot_messages"]["ask_for_confirm_delete"]
+        with Session() as session:
+            tasks = get_user_tasks(call.from_user.id, session)
+
+            bot.edit_message_text(
+                text=text.format(title=tasks[target_index].title),
+                chat_id=call.message.chat.id,
+                message_id=call.message.message_id,
+                reply_markup=keyboard,
+                parse_mode="HTML",
+            )
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith("delete_task_"))
     def delete_task_and_withdraw_users_tasks(call):
