@@ -23,7 +23,12 @@ bot_messages:
   new_task_deadline_request: |
     Укажите срок окончания задачи в формате DD:MM:YYYY:HH:mm или отправьте NONE если задача безсрочная:
   task_withdraw_format: |
-    <b>{title}</b>
+    <b>[  ] {title}</b>
+    {text}
+
+    deadline: {deadline}
+  completed_task_withdraw_format: |
+    <b>[✅] {title}</b>
     {text}
 
     deadline: {deadline}

@@ -36,6 +36,13 @@ class Create_new_task(StatesGroup):
     deadline = State()
 
 
+def displayed_task_text(task):
+    if task.status == "completed":
+        return PHRASES_CONFIG["bot_messages"]["completed_task_withdraw_format"]
+    elif task.status == "active":
+        return PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
+
+
 # передаем функции объект бота для инициализации функций требующих это
 def register_tasks_handlers(bot: TeleBot):
 
@@ -125,6 +132,19 @@ def register_tasks_handlers(bot: TeleBot):
         elif not need_button_prev and need_button_next:
             keyboard.add(buttonNext)
 
+    def completed_and_not_completed_button(keyboard: InlineKeyboardMarkup, task, index):
+
+        if task.status == "active":
+            buttonCompleped = InlineKeyboardButton(
+                "Выполнено", callback_data=f"completed_task_{index}"
+            )
+            keyboard.add(buttonCompleped)
+        elif task.status == "completed":
+            buttonNOTCompleped = InlineKeyboardButton(
+                "Не выполнено", callback_data=f"not_completed_task_{index}"
+            )
+            keyboard.add(buttonNOTCompleped)
+
     def delete_button(keyboard: InlineKeyboardMarkup, index: int) -> None:
         buttonDelete = InlineKeyboardButton(
             "Удалить", callback_data=f"ask_for_confirm_delete_task_{index}"
@@ -146,7 +166,7 @@ def register_tasks_handlers(bot: TeleBot):
             keyboard.add(buttonCompleped)
             delete_button(keyboard=keyboard, index=current_index)
 
-            text = PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
+            text = displayed_task_text(tasks[current_index])
             bot.send_message(
                 message.chat.id,
                 text.format(
@@ -173,7 +193,7 @@ def register_tasks_handlers(bot: TeleBot):
             keyboard.add(buttonCompleped)
             delete_button(keyboard=keyboard, index=target_index)
 
-            text = PHRASES_CONFIG["bot_messages"]["task_withdraw_format"]
+            text = displayed_task_text(tasks[target_index])
             # Обновляем текст сообщения и клавиатуру
             bot.edit_message_text(
                 text=text.format(
@@ -257,7 +277,8 @@ def register_tasks_handlers(bot: TeleBot):
                 keyboard=keyboard, index=target_index, num_of_tasks=len(tasks)
             )
 
-            text = PHRASES_CONFIG["bot_messages"]["deleted_task"]
+            text = displayed_task_text(tasks[target_index])
+
             bot.edit_message_text(
                 text=text.format(
                     title=tasks[target_index].title,
