@@ -2,3 +2,4 @@ venv/
 config.ini
 *.db
 __pycache__/
+*.log

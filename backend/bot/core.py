@@ -1,11 +1,16 @@
 import configparser
 import os
+import logging
 
 import telebot
 from telebot import custom_filters
 from telebot.storage import StateMemoryStorage
 
 from backend.bot.handlers import register_all_handlers
+
+
+_logger = logging.getLogger(__name__)
+
 
 # абсолютный путь к папке, где лежит текущий файл
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -22,10 +27,12 @@ bot_token = CONFIG["BOT setup"]["key"]
 state_storage = StateMemoryStorage()
 
 
+_logger.info(f"создание объекта бота с токеном {bot_token}")
 bot = telebot.TeleBot(bot_token, state_storage=state_storage)
+_logger.info(f"загрузка обработчиков команд")
 register_all_handlers(bot)
 
 
 def start_bot():
-    print(f"DEBUG: Token loaded: '{bot_token}'")
+    _logger.info("начало запросов к telegram")
     bot.infinity_polling()
