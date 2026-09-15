@@ -1,6 +1,8 @@
-from backend.bot import core
 import logging
 
+
+# насройка логирования происходит до импортирования модулей 
+# для корректной работы логов в процессе импортирования
 
 # Получаем корневой логгер
 root_logger = logging.getLogger()
@@ -16,6 +18,10 @@ root_logger.addHandler(logger_handler)
 
 # локальный логгер
 _logger = logging.getLogger(__name__)
+
+
+from backend.bot import core
+
 
 def main():
     _logger.info("запуск бота")
