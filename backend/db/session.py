@@ -19,6 +19,10 @@ def get_by_id(telegram_id, session) -> list[UserBase]:
     db_object = session.scalars(statement).one()
     return db_object
 
+def try_to_get_by_id(telegram_id, session) -> list[UserBase]:
+    statement = select(UserBase).where(UserBase.telegram_id == telegram_id)
+    db_object = session.scalars(statement).one_or_none()
+    return db_object
 
 def delete_user(user: UserBase, session) -> UserBase:
     session.delete(user)
