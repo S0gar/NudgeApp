@@ -1,0 +1,112 @@
+*{
+    /*Избавляемся от стандартных отступов браузера*/
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root{
+    /*Запишем цвета*/
+    --color-bg-app: #EBF5F6;       /* Воздушный туман (основной фон) */
+    --color-surface: #FFFFFF;      /* Чистый белый (карточки, модалки, инпуты) */
+    --color-text: #4B3831;         /* Тёмно-коричневый (основной текст и заголовки) */
+    --color-primary: #CA4213;      /* Терракотовый (главный акцент / CTA) */
+    --color-secondary: #F98C45;    /* Тёплый оранжевый (вторичный акцент) */
+    --color-gray: #CBCBCB;         /* Серый (границы и неактивные элементы) */
+}
+
+/* 1) Настройка общего фона экрана */
+body {
+  color: var(--color-text);
+  font-family: system-ui, -apple-system, sans-serif;
+  
+  /* Центрируем приложение по центру (удобно для просмотра на ПК) */
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+}
+
+/* Ограничиваем ширину под мобильный экран */
+.app-container {
+  background-color: var(--color-bg-app);
+  width: 100%;
+  max-width: 420px; /* Ширина стандартного смартфона */
+  padding: 32px;
+  
+  display: flex;
+  flex-direction: column;
+  gap: 32px; /* Расстояние между 3 фреймами */
+}
+
+/*Дизайн всех карточек*/
+.frame {
+  background-color: var(--color-surface);   
+  border-radius: 16px;                      /* Скругление углов */
+  border: 2px solid var(--color-gray);      /* Обводка вокруг фреймов */
+  padding: 16px;                            /* Внутренние отступы */
+  display: flex;
+  flex-direction: column;
+}
+
+
+
+/* 2) Дизайн карточки приветствия. !Позже добавить приятное приветственное изображение маскота!*/
+.welcome-frame {
+  padding: 16px 16px 48px 16px;     /* Внутренние отступы приветственного фрейма */
+  text-align: right;
+}
+
+.welcome-frame h1 {
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.welcome-frame p {
+  font-size: 16px;
+}
+
+
+
+/* 3) Дизайн фрейма задач*/
+.task-frame{
+    align-items: center;
+}
+
+
+/* Дизайн кнопки */
+.add-task-btn{
+    /* Уберем стандартный вид кнопки html */
+    background: none;
+    border: none;
+    cursor: pointer;
+
+    /* Длина кнопки и расположение */
+    width: 300px;
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+    
+    /* Анимация нажатия */
+    transition: opacity 0.1s ease;
+}
+
+.add-task-btn:active{
+    opacity: 0.5;
+}
+
+.add-task-btn h1{
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--color-text)
+}
+
+
+/* 4) Дизайн фрейма закрытых задач */
+.no-closed-tasks h1{
+    font-size: 16px;
+    text-align: center;
+}
+

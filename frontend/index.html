@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>InariNoko</title>
+    <link rel="stylesheet" href="style.css">
+
+</head>
+
+<body>
+    <div class="app-container">
+
+        <!--Приветственный фрейм -->
+        <header class="frame welcome-frame">
+            <div class="user-info">
+                <h1 id="user-name">Привет, Пользователь!</h1>
+                <p id="current-date">Четверг, 1 октября</p>
+            </div>
+        </header>
+
+        <!--Фрейм активных задач -->
+        <div class="frame task-frame">
+
+            <!-- Список из фреймов задач -->
+            <div class="task-list">
+                <!-- Пример карточки задачи -->
+                 <div class="task-item">
+                    
+                 </div>
+            </div>
+
+            <!-- Кнопка добавления задачи -->
+             <button class="add-task-btn" id="addTaskBtn">
+                <span class="task-btn-icon">+</span> 
+                <span>Добавить задачу</span>
+             </button>
+            
+
+        </div>
+
+        <!-- Фрейм закрытых задач -->
+        <div class="frame closed-task-frame">
+            <!-- Закрытых задач нет -->
+             <div class="no-closed-tasks">
+                <h1>Закрытых задач пока нет</h1>
+             </div>
+        </div>
+    </div>
+
+
+
+</body>
+</html>
