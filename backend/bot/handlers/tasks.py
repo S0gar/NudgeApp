@@ -1,5 +1,6 @@
 import os
 from datetime import datetime
+import logging
 
 import yaml
 
@@ -17,14 +18,18 @@ from backend.db.session import (
     get_user_tasks,
     delete_task,
     get_task_by_id,
+    try_to_get_by_id,
 )
+
+_logger = logging.getLogger(__name__)
 
 # абсолютный путь к папке, где лежит текущий файл
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 
+_logger.info("ищу путь к файлу с конфигами")
 # абсолютный путь к файлу bot_phrases.yaml относительно текущего файла
 PHRASES_PATH = os.path.join(CURRENT_DIR, "bot phrases.yaml")
-
+_logger.info("обращаюсь к конфигу с фразами")
 # обращаемся к файлу с фразами бота
 with open(PHRASES_PATH, "r", encoding="utf-8") as file:
     PHRASES_CONFIG = yaml.safe_load(file)
@@ -37,6 +42,7 @@ class Create_new_task(StatesGroup):
 
 
 def displayed_task_text(task):
+    _logger.info("опредляю по статусу задачи кнопку выполнение или обратную ей")
     if task.status == "completed":
         return PHRASES_CONFIG["bot_messages"]["completed_task_withdraw_format"]
     elif task.status == "active":
@@ -49,73 +55,104 @@ def register_tasks_handlers(bot: TeleBot):
     # команда new_task для работы с ботом в отсутствие miniapp
     @bot.message_handler(commands=["new_task"])
     def create_new_task_handler(message):
+        user_id = message.from_user.id
+        chat_id = message.chat.id
         with Session() as session:
             try:
-                user_info = get_by_id(message.from_user.id, session)
+                _logger.info(f"ищу пользователя {user_id}")
+                user_info = try_to_get_by_id(user_id, session)
+                if user_id == None:
+                    _logger.info(f"пользователь {user_id} не найден")
+                    user_not_found_error = PHRASES_CONFIG["bot_messages"]["user_not_found"]
+                    bot.send_message(chat_id, user_not_found_error)
+                else:
+                    _logger.info(f"пользователь {user_id} найден, \
+                                 запрашиваю название задачи")
+                    bot.set_state(user_id, Create_new_task.title, chat_id)
+                    new_task_title_request = PHRASES_CONFIG["bot_messages"][
+                        "new_task_title_request"
+                    ]
+                    bot.send_message(message.chat.id, new_task_title_request)
             except:
-                user_not_found_error = PHRASES_CONFIG["bot_messages"]["user_not_found"]
-                bot.send_message(message.chat.id, user_not_found_error)
-                return "user not found"
-
-        bot.set_state(message.from_user.id, Create_new_task.title, message.chat.id)
-
-        new_task_title_request = PHRASES_CONFIG["bot_messages"][
-            "new_task_title_request"
-        ]
-        bot.send_message(message.chat.id, new_task_title_request)
+                _logger.exception(f"неизвестная ошибка при попытке создать \
+                                  новоую задачу пользователя {user_id}")
 
     @bot.message_handler(state=Create_new_task.title)
     def create_new_task_title_request(message):
-        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+        with bot.retrieve_data(user_id, chat_id) as data:
             data["title"] = message.text
 
-        bot.set_state(message.from_user.id, Create_new_task.text, message.chat.id)
+        _logger.info(f"запрашиваю у пользователя {user_id} текст задачи")
+        bot.set_state(user_id, Create_new_task.text, chat_id)
         new_task_text_request = PHRASES_CONFIG["bot_messages"]["new_task_text_request"]
-        bot.send_message(message.chat.id, new_task_text_request)
+        bot.send_message(chat_id, new_task_text_request)
 
     @bot.message_handler(state=Create_new_task.text)
     def create_new_task_text_request(message):
-        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        user_id = message.from_user.id
+        chat_id = message.chat.id
+        with bot.retrieve_data(user_id, chat_id) as data:
             data["text"] = message.text
 
-        bot.set_state(message.from_user.id, Create_new_task.deadline, message.chat.id)
+        _logger.info(f"запрашиваю у пользователя {user_id} дедлайн задачи")
+        bot.set_state(user_id, Create_new_task.deadline, chat_id)
         new_task_deadline_request = PHRASES_CONFIG["bot_messages"][
             "new_task_deadline_request"
         ]
-        bot.send_message(message.chat.id, new_task_deadline_request)
+        bot.send_message(chat_id, new_task_deadline_request)
 
     @bot.message_handler(state=Create_new_task.deadline)
     def create_new_task_deadline_request(message):
-        with bot.retrieve_data(message.from_user.id, message.chat.id) as data:
+        user_tg_id = message.from_user.id
+        chat_id = message.chat.id
+        with bot.retrieve_data(user_tg_id, chat_id) as data:
             title = data["title"]
             text = data["text"]
             deadline = message.text
 
-        parsed_deadline = datetime.strptime(deadline, "%d.%m.%Y")
+        _logger.info("меняю типа дедлайна из str в datatime")
+        try:
+            parsed_deadline = datetime.strptime(deadline, "%d.%m.%Y")
+        except:
+            _logger.info(f"ошибка при переводе типа дедлайна пользователя {user_tg_id}")
+
+
 
         with Session() as session:
+            _logger.info(f"беру id пользователя {user_tg_id} по его tg id")
             try:
-                create_task(
-                    TasksBase(
-                        user_id=message.from_user.id,
-                        title=title,
-                        text=text,
-                        deadline=parsed_deadline,
-                        status="active",
-                    ),
-                    session,
-                )
+                user_id = get_by_id(user_tg_id, session).id
             except:
-                session.rollback()
-                raise
+                _logger.exception("ошибка при взятии id у пользователя по его tg id")
             else:
-                session.commit()
+                _logger.info("id пользователя получен успешно")
+                try:
+                    create_task(
+                        TasksBase(
+                            user_id=user_id,
+                            title=title,
+                            text=text,
+                            deadline=parsed_deadline,
+                            status="active",
+                        ),
+                        session,
+                    )
+                except:
+                    session.rollback()
+                    raise
+                else:
+                    _logger.info(f"задача пользователя {user_tg_id}")
+                    session.commit()
 
-        message_text = f"Тест создания задачи:\nНазвание: {title}\nТекст: {text}\nДедлайн: {deadline}"
-        bot.send_message(message.chat.id, message_text)
+                message_text = f"Тест создания задачи:\nНазвание: {title}\n\
+                    Текст: {text}\nДедлайн: {deadline}"
+                bot.send_message(chat_id, message_text)
 
-        bot.delete_state(message.from_user.id, message.chat.id)
+        bot.delete_state(user_tg_id, chat_id)
 
+    _logger.info("добавляю кастомный фильтр StateFilter")
     bot.add_custom_filter(custom_filters.StateFilter(bot))
 
     def next_and_prew_buttons(
@@ -133,7 +170,6 @@ def register_tasks_handlers(bot: TeleBot):
             keyboard.add(buttonNext)
 
     def completed_and_not_completed_button(keyboard: InlineKeyboardMarkup, task, index):
-
         if task.status == "active":
             buttonCompleped = InlineKeyboardButton(
                 "Выполнено", callback_data=f"completed_task_{index}"
@@ -153,24 +189,26 @@ def register_tasks_handlers(bot: TeleBot):
 
     @bot.message_handler(commands=["my_tasks"])
     def withdraw_users_tasks(message):
+        user_id = message.from_user.id
+        _logger.info(f"вывожу задачу №0 пользователя {user_id}")
         with Session() as session:
             tasks = get_user_tasks(message.from_user.id, session)
 
             current_index = 0
             keyboard = InlineKeyboardMarkup(row_width=2)
 
-            buttonCompleped = InlineKeyboardButton(
-                "Выполнено", callback_data=f"completed_task_{current_index}"
-            )
-            next_and_prew_buttons(keyboard=keyboard, index=0, num_of_tasks=len(tasks))
-            keyboard.add(buttonCompleped)
+            completed_and_not_completed_button(keyboard=keyboard, task=tasks[current_index], index=0)
+            next_and_prew_buttons(keyboard=keyboard, index=current_index, num_of_tasks=len(tasks))
             delete_button(keyboard=keyboard, index=current_index)
 
             text = displayed_task_text(tasks[current_index])
+
             bot.send_message(
                 message.chat.id,
                 text.format(
-                    title=tasks[0].title, text=tasks[0].text, deadline=tasks[0].deadline
+                    title=tasks[current_index].title, 
+                    text=tasks[current_index].text, 
+                    deadline=tasks[current_index].deadline
                 ),
                 reply_markup=keyboard,
                 parse_mode="HTML",
@@ -179,32 +217,38 @@ def register_tasks_handlers(bot: TeleBot):
 
     @bot.callback_query_handler(func=lambda call: call.data.startswith("task_"))
     def next_task_and_withdraw_users_tasks(call):
+        user_id = call.from_user.id
+        chat_id = call.message.chat.id
         target_index = int(call.data.split("_")[1])
+        _logger.info(f"вывожу задачу №{target_index} пользователя {user_id}")
         with Session() as session:
-            tasks = get_user_tasks(call.from_user.id, session)
+            tasks = get_user_tasks(user_id, session)
             keyboard = InlineKeyboardMarkup(row_width=2)
 
-            buttonCompleped = InlineKeyboardButton(
-                "Выполнено", callback_data=f"completed_task_{target_index}"
+            completed_and_not_completed_button(
+                    keyboard=keyboard, 
+                    task=tasks[target_index], 
+                    index=target_index
             )
             next_and_prew_buttons(
-                keyboard=keyboard, index=target_index, num_of_tasks=len(tasks)
+                    keyboard=keyboard, 
+                    index=target_index, 
+                    num_of_tasks=len(tasks)
             )
-            keyboard.add(buttonCompleped)
             delete_button(keyboard=keyboard, index=target_index)
 
             text = displayed_task_text(tasks[target_index])
             # Обновляем текст сообщения и клавиатуру
             bot.edit_message_text(
-                text=text.format(
-                    title=tasks[target_index].title,
-                    text=tasks[target_index].text,
-                    deadline=tasks[target_index].deadline,
-                ),
-                chat_id=call.message.chat.id,
-                message_id=call.message.message_id,
-                reply_markup=keyboard,
-                parse_mode="HTML",
+                    text=text.format(
+                            title=tasks[target_index].title,
+                            text=tasks[target_index].text,
+                            deadline=tasks[target_index].deadline,
+                    ),
+                    chat_id=chat_id,
+                    message_id=call.message.message_id,
+                    reply_markup=keyboard,
+                    parse_mode="HTML",
             )
             bot.answer_callback_query(call.id)
 
@@ -212,6 +256,9 @@ def register_tasks_handlers(bot: TeleBot):
         func=lambda call: call.data.startswith("ask_for_confirm_delete_task_")
     )
     def ask_for_confirm_delete_task_and_withdraw_users_tasks(call):
+        user_id = call.from_user.id
+        chat_id = call.message.chat.id
+
         target_index = int(call.data.split("_")[5])
         keyboard = InlineKeyboardMarkup(row_width=2)
         button_conf = InlineKeyboardButton(
@@ -222,12 +269,13 @@ def register_tasks_handlers(bot: TeleBot):
         )
         keyboard.add(button_conf, button_cancel)
         text = PHRASES_CONFIG["bot_messages"]["ask_for_confirm_delete"]
+        _logger.info(f"обращаюсь в БД за задачами пользователя {user_id}")
         with Session() as session:
-            tasks = get_user_tasks(call.from_user.id, session)
+            tasks = get_user_tasks(user_id, session)
 
             bot.edit_message_text(
                 text=text.format(title=tasks[target_index].title),
-                chat_id=call.message.chat.id,
+                chat_id=chat_id,
                 message_id=call.message.message_id,
                 reply_markup=keyboard,
                 parse_mode="HTML",
