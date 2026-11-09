@@ -7,7 +7,5 @@ engine = create_async_engine(
     Config.DB_URL, 
     echo=True)
 
-session_factory = session.sessionmaker(engine)
-
 def create_db_and_tables() -> None:
     Base.metadata.create_all(engine)
