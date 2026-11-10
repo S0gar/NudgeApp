@@ -6,7 +6,7 @@ from telebot.async_telebot import AsyncTeleBot
 from telebot.storage import StateMemoryStorage
 
 # from backend.bot.handlers import register_all_handlers
-from backend.config import Config
+#from backend.config import Config
 
 
 _logger = logging.getLogger(__name__)
@@ -26,3 +26,4 @@ _logger.info(f"загрузка обработчиков команд")
 async def start_bot():
     _logger.info("начало запросов к telegram")
     await bot.infinity_polling()
+Ы
