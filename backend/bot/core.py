@@ -1,10 +1,11 @@
 import logging
 
 import telebot
-from telebot import custom_filters, TeleBot
+from telebot import custom_filters
+from telebot.async_telebot import AsyncTeleBot
 from telebot.storage import StateMemoryStorage
 
-from backend.bot.handlers import register_all_handlers
+# from backend.bot.handlers import register_all_handlers
 from backend.config import Config
 
 
@@ -15,10 +16,13 @@ bot_token = Config.BOT_TOKEN
 # объявляем объект для работы с машиной состояния (FSM - Finite State Machine)
 state_storage = StateMemoryStorage()
 
-bot = TeleBot(bot_token, state_storage=state_storage)
+bot = AsyncTeleBot(bot_token, state_storage=state_storage)
 _logger.info(f"загрузка обработчиков команд")
-register_all_handlers(bot)
+# register_all_handlers(bot)
 
-def start_bot():
+# ПРОБЛЕМА С ПОДКЛЮЧЕНИЕМ АСИНХРОННОГО БОТА К ДНС
+
+
+async def start_bot():
     _logger.info("начало запросов к telegram")
-    bot.infinity_polling()
+    await bot.infinity_polling()

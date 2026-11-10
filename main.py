@@ -1,4 +1,5 @@
 import logging
+import asyncio
 
 
 # насройка логирования происходит до импортирования модулей 
@@ -23,10 +24,11 @@ _logger = logging.getLogger(__name__)
 from backend.bot import core
 
 
-def main():
+async def main():
     _logger.info("запуск бота")
-    core.start_bot()
+    await core.start_bot()
+
 
 if __name__ == "__main__":
     _logger.info("начало работы программы")
-    main()
+    asyncio.run(main())

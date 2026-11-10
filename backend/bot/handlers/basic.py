@@ -28,10 +28,10 @@ def register_basic_handlers(bot: TeleBot):
 
     # приветсвие пользователя при получении от него /start
     @bot.message_handler(commands=["start"])
-    def start_message(message):
+    async def start_message(message):
         greetings_message_text = PHRASES_CONFIG["bot_messages"]["greeting"]
 
-        _ = bot.send_message(message.chat.id, greetings_message_text)
+        _ = await bot.send_message(message.chat.id, greetings_message_text)
 
     # регистрация пользователя после команды /reg
     @bot.message_handler(commands=["reg"])
